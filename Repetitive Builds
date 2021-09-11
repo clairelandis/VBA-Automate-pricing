@@ -1,0 +1,1138 @@
+' Automate pricing effort of repetitive builds based on historical analysis
+' Process uses VBA in MS Excel to manipulate the data set to take averages of historical costs and applies current rates
+' All company names and hard-coded rate values have been edited to protect privacy
+
+Sub CostHistoryFormat()
+'
+' CostHistoryFormat Macro
+' Adds Columns, Takes, Averages for 1 Part Number 
+'
+' Keyboard Shortcut: Ctrl+q
+'
+
+
+'This script works for 1 PN. It has all overheads hard coded to Company1 FY21 Budgeted rates. The qty is hardcoded to qty 1 and will need to be adjusted.
+
+
+    Dim msgPrompt As String, msgTitle As String
+    Dim msgButtons As Integer, msgResult As Integer
+
+    msgPrompt = "Is this for Company1? "
+    msgButtons = vbYesNo + vbQuestion + vbDefaultButton2
+    msgTitle = "Which company?"
+
+    msgResult = MsgBox(msgPrompt, msgButtons, msgTitle)
+
+    If msgResult = vbYes Then
+        
+' Put the Company1 stuff here
+    Rows("1:1").Select
+    Selection.Delete Shift:=xlUp
+    Range("L1").Select
+    Columns("L:L").Select
+    Range("L1").Activate
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("L1").Select
+    ActiveCell.FormulaR1C1 = "Material Cost Per Unit"
+    Range("L2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-1]/RC[-4]"
+    Range("L2").Select
+    Selection.AutoFill Destination:=Range("L2:L" & Range("E" & Rows.Count).End(xlUp).Row)
+    Range(Selection, Selection.End(xlDown)).Select
+    Columns("J:J").Select
+    Range("J1").Activate
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("J1").Select
+    ActiveCell.FormulaR1C1 = "Hours Per Unit"
+    Range("J2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-1]/RC[-2]"
+    Range("J2").Select
+    Selection.AutoFill Destination:=Range("J2:J" & Range("E" & Rows.Count).End(xlUp).Row)
+    Range(Selection, Selection.End(xlDown)).Select
+    Range("K1").Select
+    Selection.AutoFilter
+    Range("J1").Select
+   
+'This next portion is for the filter. Remove anything that is not "complete"
+    Dim Rng As Range
+Dim Rng_Del As Range
+
+    
+    'Apply autofilter to data rage
+    'Note: data must start in cell A1 for this macro to work
+    Set Rng = Range("A1").CurrentRegion
+    
+   ' If wks_Working.AutoFilterMode = True Then
+    '    wks_Working.AutoFilter.ShowAllData
+    'End If
+    
+    Rng.AutoFilter field:=11, Criteria1:=Array( _
+        "Closed", "In Shop", "Released"), Operator:=xlFilterValues
+ 
+    
+   
+    'Delete visible rows assuming there's nothing else below the last row
+    Rng.Offset(1, 0).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+    
+
+     ActiveSheet.ShowAllData
+       
+   'This portion addes the average if formulas
+    Range("M1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(3, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=AVERAGEIF(R2C13:R[-3]C,"">0"")"
+    ActiveCell.Select
+  
+    
+    Range("J1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(3, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=AVERAGEIF(R2C10:R[-3]C,"">0"")"
+    ActiveCell.Select
+    
+    
+   'This section will build the labor cost buildup format
+   'Also between each new field I added the calculation to make the relative cell reference more simple
+    Range("A1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(8, 0).Range("A1").Select
+    
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Material"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-6]C[12]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Material Handling"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".05"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Labor Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-6]C[7]"
+    ActiveCell.NumberFormat = "0.00"
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Labor Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "15.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Eng Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'Eng Hours Default to 0%
+    ActiveCell.FormulaR1C1 = "0.0"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "PM Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-3]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'PM Hours Default to 0%
+    ActiveCell.FormulaR1C1 = "0.0"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Eng Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "30.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "PM Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "0.0"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Fringe"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-5]+R[0]C[-2]+R[0]C[-1])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "0.50"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Factory OH"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-6]+R[0]C[-3])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "1.1"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Onsite OH"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-3]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "0"
+    ActiveCell.NumberFormat = "0.00%"
+       
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Subtotal Material and Labor"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-11]+R[0]C[-8]+R[0]C[-5]+R[0]C[-4]+R[0]C[-3]+R[0]C[-2]+R[0]C[-1]+R[0]C[-10]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+        
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Freight"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".01"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "G&A"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-1]+R[0]C[-2])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "0.05"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Subtotal"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]+R[0]C[-2]+R[0]C[-3]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+   
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Fee"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".12"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+       
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Total Unit Price"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=Round(R[0]C[-1]+R[0]C[-2],2)"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Qty"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "1"
+    ActiveCell.NumberFormat = "0.00"
+    
+        
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Extended Price"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[0]C[-2]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+
+        ActiveCell.Select
+    Selection.End(xlToLeft).Select
+        
+    ActiveCell.Offset(7, 0).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Contribution Margin Calculation: "
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Direct Material Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-8]C[-1]*R[-8]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Freight / ODC Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-9]C[11]*R[-9]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Direct Labor Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[-10]C[2]+R[-10]C[5]+R[-10]C[6])*R[-10]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Fringe"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-11]C[7]*R[-11]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Total Revenue"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-12]C[17]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "CM"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-1]C[0]-(R[-5]C[0]+R[-4]C[0]+R[-3]C[0]+R[-2]C[0])"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+        
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "CM%"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-1]C[0]/R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00%"
+    Selection.Font.Bold = True
+    
+
+
+    Cells.Select
+    Selection.ColumnWidth = 12.57
+    Range("A1").Select
+
+
+    Selection.End(xlDown).Select
+    Selection.End(xlDown).Select
+    Rows(ActiveCell.Row).Select
+    Selection.RowHeight = 40.5
+    
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlBottom
+        .wraptext = True
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+
+        
+' End Company1 Stuff Here
+
+    ElseIf msgResult = vbNo Then
+            Dim msgPrompt2 As String, msgTitle2 As String
+            Dim msgButtons2 As Integer, msgResult2 As Integer
+
+            msgPrompt2 = "Is this for Company2 Location1?"
+            msgButtons2 = vbYesNo + vbQuestion + vbDefaultButton2
+            msgTitle2 = "Which company?"
+
+            msgResult2 = MsgBox(msgPrompt2, msgButtons2, msgTitle2)
+
+                If msgResult2 = vbYes Then
+                
+                
+ ' Put the Company2 Stuff Here
+ 
+ 
+    Rows("1:1").Select
+    Selection.Delete Shift:=xlUp
+    Range("L1").Select
+    Columns("L:L").Select
+    Range("L1").Activate
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("L1").Select
+    ActiveCell.FormulaR1C1 = "Material Cost Per Unit"
+    Range("L2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-1]/RC[-4]"
+    Range("L2").Select
+    Selection.AutoFill Destination:=Range("L2:L" & Range("E" & Rows.Count).End(xlUp).Row)
+    Range(Selection, Selection.End(xlDown)).Select
+    Columns("J:J").Select
+    Range("J1").Activate
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("J1").Select
+    ActiveCell.FormulaR1C1 = "Hours Per Unit"
+    Range("J2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-1]/RC[-2]"
+    Range("J2").Select
+    Selection.AutoFill Destination:=Range("J2:J" & Range("E" & Rows.Count).End(xlUp).Row)
+    Range(Selection, Selection.End(xlDown)).Select
+    Range("K1").Select
+    Selection.AutoFilter
+    Range("J1").Select
+   
+'This next portion is for the filter. Remove anything that is not "complete"
+    Dim Rng2 As Range
+Dim Rng2_Del As Range
+
+    
+    'Apply autofilter to data rage
+    'Note: data must start in cell A1 for this macro to work
+    Set Rng2 = Range("A1").CurrentRegion
+    
+   ' If wks_Working.AutoFilterMode = True Then
+    '    wks_Working.AutoFilter.ShowAllData
+    'End If
+    
+    Rng2.AutoFilter field:=11, Criteria1:=Array( _
+        "Closed", "In Shop", "Released"), Operator:=xlFilterValues
+ 
+    
+   
+    'Delete visible rows assuming there's nothing else below the last row
+    Rng2.Offset(1, 0).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+    
+
+     ActiveSheet.ShowAllData
+       
+   'This portion addes the average if formulas
+    Range("M1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(3, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=AVERAGEIF(R2C13:R[-3]C,"">0"")"
+    ActiveCell.Select
+  
+    
+    Range("J1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(3, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=AVERAGEIF(R2C10:R[-3]C,"">0"")"
+    ActiveCell.Select
+    
+    
+   'This section will build the labor cost buildup format
+   'Also between each new field I added the calculation to make the relative cell reference more simple
+    Range("A1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(8, 0).Range("A1").Select
+    
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Material"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-6]C[12]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Material Handling"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".05"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Labor Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-6]C[7]"
+    ActiveCell.NumberFormat = "0.00"
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Labor Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "30.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Eng Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'Eng Hours Default to 0%
+    ActiveCell.FormulaR1C1 = "0.0"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "PM Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-3]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'PM Hours Default to 0%
+    ActiveCell.FormulaR1C1 = "0.0"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Eng Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "30.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "PM Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "50.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Fringe"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-5]+R[0]C[-2]+R[0]C[-1])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "0.50"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Factory OH"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-6]+R[0]C[-3])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "1.1"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Onsite OH"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-3]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "0.20"
+    ActiveCell.NumberFormat = "0.00%"
+       
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Subtotal Material and Labor"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-11]+R[0]C[-8]+R[0]C[-5]+R[0]C[-4]+R[0]C[-3]+R[0]C[-2]+R[0]C[-1]+R[0]C[-10]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+        
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Freight"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".01"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "G&A"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-1]+R[0]C[-2])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "0.05"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Subtotal"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]+R[0]C[-2]+R[0]C[-3]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+   
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Fee"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".12"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+       
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Total Unit Price"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=Round(R[0]C[-1]+R[0]C[-2],2)"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Qty"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "1"
+    ActiveCell.NumberFormat = "0.00"
+    
+        
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Extended Price"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[0]C[-2]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+
+        ActiveCell.Select
+    Selection.End(xlToLeft).Select
+        
+    ActiveCell.Offset(7, 0).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Contribution Margin Calculation: "
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Direct Material Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-8]C[-1]*R[-8]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Freight / ODC Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-9]C[11]*R[-9]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Direct Labor Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[-10]C[2]+R[-10]C[5]+R[-10]C[6])*R[-10]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Fringe"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-11]C[7]*R[-11]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Total Revenue"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-12]C[17]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "CM"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-1]C[0]-(R[-5]C[0]+R[-4]C[0]+R[-3]C[0]+R[-2]C[0])"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+        
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "CM%"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-1]C[0]/R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00%"
+    Selection.Font.Bold = True
+    
+
+
+    Cells.Select
+    Selection.ColumnWidth = 12.57
+    Range("A1").Select
+
+
+    Selection.End(xlDown).Select
+    Selection.End(xlDown).Select
+    Rows(ActiveCell.Row).Select
+    Selection.RowHeight = 40.5
+    
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlBottom
+        .wraptext = True
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+ 
+
+                   
+'End the Company2 Stuff Here
+
+                    ElseIf msgResult2 = vbNo Then
+                    
+' Put the Company3 Stuff Here
+                    
+    Rows("1:1").Select
+    Selection.Delete Shift:=xlUp
+    Range("L1").Select
+    Columns("L:L").Select
+    Range("L1").Activate
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("L1").Select
+    ActiveCell.FormulaR1C1 = "Material Cost Per Unit"
+    Range("L2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-1]/RC[-4]"
+    Range("L2").Select
+    Selection.AutoFill Destination:=Range("L2:L" & Range("E" & Rows.Count).End(xlUp).Row)
+    Range(Selection, Selection.End(xlDown)).Select
+    Columns("J:J").Select
+    Range("J1").Activate
+    Selection.Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    Range("J1").Select
+    ActiveCell.FormulaR1C1 = "Hours Per Unit"
+    Range("J2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-1]/RC[-2]"
+    Range("J2").Select
+    Selection.AutoFill Destination:=Range("J2:J" & Range("E" & Rows.Count).End(xlUp).Row)
+    Range(Selection, Selection.End(xlDown)).Select
+    Range("K1").Select
+    Selection.AutoFilter
+    Range("J1").Select
+   
+'This next portion is for the filter. Remove anything that is not "complete"
+    Dim Rng3 As Range
+Dim Rng3_Del As Range
+
+    
+    'Apply autofilter to data rage
+    'Note: data must start in cell A1 for this macro to work
+    Set Rng3 = Range("A1").CurrentRegion
+    
+   ' If wks_Working.AutoFilterMode = True Then
+    '    wks_Working.AutoFilter.ShowAllData
+    'End If
+    
+    Rng3.AutoFilter field:=11, Criteria1:=Array( _
+        "Closed", "In Shop", "Released"), Operator:=xlFilterValues
+ 
+    
+   
+    'Delete visible rows assuming there's nothing else below the last row
+    Rng3.Offset(1, 0).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+    
+
+     ActiveSheet.ShowAllData
+       
+   'This portion addes the average if formulas
+    Range("M1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(3, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=AVERAGEIF(R2C13:R[-3]C,"">0"")"
+    ActiveCell.Select
+  
+    
+    Range("J1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(3, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=AVERAGEIF(R2C10:R[-3]C,"">0"")"
+    ActiveCell.Select
+    
+    
+   'This section will build the labor cost buildup format
+   'Also between each new field I added the calculation to make the relative cell reference more simple
+    Range("A1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(8, 0).Range("A1").Select
+    
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Material"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-6]C[12]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Material Handling"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".05"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Labor Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-6]C[7]"
+    ActiveCell.NumberFormat = "0.00"
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Base Labor Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "30.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Eng Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'Eng Hours Default to 0%
+    ActiveCell.FormulaR1C1 = "0.0"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "PM Hours"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-3]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'PM Hours Default to 0%
+    ActiveCell.FormulaR1C1 = "0.0"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Eng Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "50.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "PM Cost"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-2]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "50.00"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Fringe"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-5]+R[0]C[-2]+R[0]C[-1])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "0.50"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Factory OH"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-6]+R[0]C[-3])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = "1.1"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Onsite OH"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-3]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.FormulaR1C1 = ".20"
+    ActiveCell.NumberFormat = "0.00%"
+       
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Subtotal Material and Labor"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-11]+R[0]C[-8]+R[0]C[-5]+R[0]C[-4]+R[0]C[-3]+R[0]C[-2]+R[0]C[-1]+R[0]C[-10]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+        
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Freight"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".01"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "G&A"
+    'I have decided to hard code all the overhead rates for now
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[0]C[-1]+R[0]C[-2])*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "0.05"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+    
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Subtotal"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]+R[0]C[-2]+R[0]C[-3]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+   
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Fee"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[-2]C[0]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    ActiveCell.Offset(-2, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = ".12"
+    ActiveCell.NumberFormat = "0.00%"
+    
+    
+       
+    ActiveCell.Offset(1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Total Unit Price"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=Round(R[0]C[-1]+R[0]C[-2],2)"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Qty"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "1"
+    ActiveCell.NumberFormat = "0.00"
+    
+        
+    ActiveCell.Offset(-1, 1).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Extended Price"
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[0]C[-1]*R[0]C[-2]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+
+        ActiveCell.Select
+    Selection.End(xlToLeft).Select
+        
+    ActiveCell.Offset(7, 0).Range("A1").Select
+    Selection.Font.Bold = True
+    ActiveCell.FormulaR1C1 = "Contribution Margin Calculation: "
+    ActiveCell.Offset(1, 0).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Direct Material Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-8]C[-1]*R[-8]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Freight / ODC Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-9]C[11]*R[-9]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Direct Labor Cost"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=(R[-10]C[2]+R[-10]C[5]+R[-10]C[6])*R[-10]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Fringe"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-11]C[7]*R[-11]C[16]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "Total Revenue"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-12]C[17]"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+    
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "CM"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-1]C[0]-(R[-5]C[0]+R[-4]C[0]+R[-3]C[0]+R[-2]C[0])"
+    ActiveCell.NumberFormat = "$#,##0.00"
+    
+        
+    ActiveCell.Offset(1, -1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "CM%"
+    ActiveCell.Offset(0, 1).Range("A1").Select
+    ActiveCell.FormulaR1C1 = "=R[-1]C[0]/R[-2]C[0]"
+    ActiveCell.NumberFormat = "0.00%"
+    Selection.Font.Bold = True
+    
+
+
+    Cells.Select
+    Selection.ColumnWidth = 12.57
+    Range("A1").Select
+
+
+    Selection.End(xlDown).Select
+    Selection.End(xlDown).Select
+    Rows(ActiveCell.Row).Select
+    Selection.RowHeight = 40.5
+    
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlBottom
+        .wraptext = True
+        .Orientation = 0
+        .AddIndent = False
+        .IndentLevel = 0
+        .ShrinkToFit = False
+        .ReadingOrder = xlContext
+        .MergeCells = False
+    End With
+                    
+                    
+'End the Company3 Stuff Here
+        
+    End If
+    End If
+
+    
+
+End Sub
